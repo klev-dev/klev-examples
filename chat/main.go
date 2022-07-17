@@ -180,7 +180,7 @@ func (a *App) room(w http.ResponseWriter, r *http.Request, user string) error {
 	}
 
 	var msgs []RoomMessage
-	offset := int64(-1)
+	offset := klev.OffsetOldest
 	for {
 		next, messages, err := a.klev.Consume(r.Context(), logID, offset, 32)
 		switch {

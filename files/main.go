@@ -114,7 +114,7 @@ var downloadCmd = &cobra.Command{
 		}
 
 		var data = make([]byte, 0, md.Size)
-		offset := int64(-1)
+		offset := klev.OffsetOldest
 		for {
 			next, msgs, err := klient.Consume(cmd.Context(), logID, offset, 32)
 			if err != nil {
