@@ -11,6 +11,7 @@ import (
 
 	klev "github.com/klev-dev/klev-api-go"
 	"github.com/segmentio/ksuid"
+	flag "github.com/spf13/pflag"
 )
 
 type App struct {
@@ -22,11 +23,19 @@ type App struct {
 }
 
 func main() {
-	reload := true
+	reload := flag.Bool("reload", false, "if uses dynamic reloading")
+	flag.Parse()
 
+	if err := run(*reload); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func run(reload bool) error {
 	t, err := getTemplates(reload)
 	if err != nil {
-		panic(err.Error())
+		return err
 	}
 
 	klevCfg := klev.NewConfig(os.Getenv("KLEV_TOKEN_DEMO"))
@@ -41,9 +50,7 @@ func main() {
 		Addr:    "127.0.0.1:8000",
 		Handler: a,
 	}
-	if err := srv.ListenAndServe(); err != nil {
-		panic(err.Error())
-	}
+	return srv.ListenAndServe()
 }
 
 func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
