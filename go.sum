@@ -3,6 +3,8 @@ github.com/inconshreveable/mousetrap v1.0.0 h1:Z8tu5sraLXCXIcARxBp/8cbvlwVa7Z1NH
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
 github.com/klev-dev/klev-api-go v0.0.0-20220715225153-1b0a22c2c915 h1:/JaYVCDQ0Ydg9Cr2XfX8lBL6I7Oa6tY47nfMYNmtDV0=
 github.com/klev-dev/klev-api-go v0.0.0-20220715225153-1b0a22c2c915/go.mod h1:UqebR7re4EPcI20bl6CeJN8KtNyoc0BZjZKuoQF+WJg=
+github.com/klev-dev/klev-api-go v0.0.0-20220717143704-23bf9e725e0f h1:Fi35i1CwJ3SRxqxWCYAmP4KNLaRUdC5YEFUFfNdwokc=
+github.com/klev-dev/klev-api-go v0.0.0-20220717143704-23bf9e725e0f/go.mod h1:UqebR7re4EPcI20bl6CeJN8KtNyoc0BZjZKuoQF+WJg=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/segmentio/ksuid v1.0.4 h1:sBo2BdShXjmcugAMwjugoGUdUV0pcxY5mW4xKRn3v4c=
 github.com/segmentio/ksuid v1.0.4/go.mod h1:/XUiZBD3kVx5SmUOl55voK5yeAbBNNIed+2O73XgrPE=

@@ -70,7 +70,7 @@ var uploadCmd = &cobra.Command{
 			return err
 		}
 
-		log, err := klient.LogCreate(klev.LogIn{
+		log, err := klient.LogCreate(cmd.Context(), klev.LogIn{
 			Metadata: string(md),
 		})
 		if err != nil {
@@ -83,7 +83,7 @@ var uploadCmd = &cobra.Command{
 				high = len(msgs)
 			}
 
-			if _, err := klient.Publish(log.LogID, msgs[low:high]); err != nil {
+			if _, err := klient.Publish(cmd.Context(), log.LogID, msgs[low:high]); err != nil {
 				return err
 			}
 		}
@@ -104,7 +104,7 @@ var downloadCmd = &cobra.Command{
 			return err
 		}
 
-		log, err := klient.LogGet(logID)
+		log, err := klient.LogGet(cmd.Context(), logID)
 		if err != nil {
 			return err
 		}
@@ -116,7 +116,7 @@ var downloadCmd = &cobra.Command{
 		var data = make([]byte, 0, md.Size)
 		offset := int64(-1)
 		for {
-			next, msgs, err := klient.Consume(logID, offset, 32)
+			next, msgs, err := klient.Consume(cmd.Context(), logID, offset, 32)
 			if err != nil {
 				return err
 			}

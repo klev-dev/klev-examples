@@ -96,13 +96,13 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (a *App) index(w http.ResponseWriter, r *http.Request, user string) error {
-	logs, err := a.klev.LogsList()
+	logs, err := a.klev.LogsList(r.Context())
 	if err != nil {
 		return err
 	}
 
 	if len(logs) == 0 {
-		log, err := a.klev.LogCreate(klev.LogIn{
+		log, err := a.klev.LogCreate(r.Context(), klev.LogIn{
 			Metadata:    "General",
 			TrimSeconds: 60 * 60,
 		})
@@ -130,7 +130,7 @@ func (a *App) addRoom(w http.ResponseWriter, r *http.Request, user string) error
 		return err
 	}
 	if name := r.FormValue("room-name"); name != "" {
-		log, err := a.klev.LogCreate(klev.LogIn{
+		log, err := a.klev.LogCreate(r.Context(), klev.LogIn{
 			Metadata:    name,
 			TrimSeconds: 60 * 60,
 		})
@@ -160,7 +160,7 @@ func (a *App) room(w http.ResponseWriter, r *http.Request, user string) error {
 			return err
 		}
 		if text := r.FormValue("message"); text != "" {
-			_, err := a.klev.Publish(logID, []klev.PublishMessage{klev.NewPublishMessage(user, text)})
+			_, err := a.klev.Publish(r.Context(), logID, []klev.PublishMessage{klev.NewPublishMessage(user, text)})
 			switch {
 			case klev.IsError(err, klev.ErrLogsNotFound):
 				return a.redirect(w, r, "/")
@@ -175,7 +175,7 @@ func (a *App) room(w http.ResponseWriter, r *http.Request, user string) error {
 	var msgs []RoomMessage
 	offset := int64(-1)
 	for {
-		next, messages, err := a.klev.Consume(logID, offset, 32)
+		next, messages, err := a.klev.Consume(r.Context(), logID, offset, 32)
 		switch {
 		case klev.IsError(err, klev.ErrLogsNotFound):
 			return a.redirect(w, r, "/")
@@ -197,7 +197,7 @@ func (a *App) room(w http.ResponseWriter, r *http.Request, user string) error {
 		}
 	}
 
-	logs, err := a.klev.LogsList()
+	logs, err := a.klev.LogsList(r.Context())
 	if err != nil {
 		return err
 	}
