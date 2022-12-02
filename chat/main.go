@@ -10,7 +10,6 @@ import (
 	"time"
 
 	klev "github.com/klev-dev/klev-api-go"
-	"github.com/segmentio/ksuid"
 	flag "github.com/spf13/pflag"
 )
 
@@ -157,10 +156,7 @@ type RoomMessage struct {
 }
 
 func (a *App) room(w http.ResponseWriter, r *http.Request, user string) error {
-	logID, err := ksuid.Parse(r.URL.Path[1:])
-	if err != nil {
-		return a.redirect(w, r, "/")
-	}
+	logID := klev.LogID(r.URL.Path[1:])
 
 	if r.Method == http.MethodPost {
 		if err := r.ParseForm(); err != nil {

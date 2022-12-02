@@ -7,7 +7,6 @@ import (
 	"os"
 
 	klev "github.com/klev-dev/klev-api-go"
-	"github.com/segmentio/ksuid"
 	"github.com/spf13/cobra"
 )
 
@@ -99,10 +98,7 @@ var downloadCmd = &cobra.Command{
 	Short: "download files from klev",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		logID, err := ksuid.Parse(args[0])
-		if err != nil {
-			return err
-		}
+		logID := klev.LogID(args[0])
 
 		log, err := klient.LogGet(cmd.Context(), logID)
 		if err != nil {
