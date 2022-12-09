@@ -6,18 +6,18 @@ import (
 	"io/ioutil"
 	"os"
 
-	klev "github.com/klev-dev/klev-api-go"
+	api "github.com/klev-dev/klev-api-go"
 	"github.com/spf13/cobra"
 )
 
-var klient *klev.Client
+var client *api.Client
 
 var rootCmd = &cobra.Command{
 	Use:   "klev-example-files",
 	Short: "upload/download files via klev",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		cfg := klev.NewConfig(os.Getenv("KLEV_TOKEN_DEMO"))
-		klient = klev.New(cfg)
+		cfg := api.NewConfig(os.Getenv("KLEV_TOKEN_DEMO"))
+		client = api.New(cfg)
 	},
 }
 
@@ -52,14 +52,14 @@ var uploadCmd = &cobra.Command{
 		}
 		dataLen := int64(len(data))
 
-		var msgs []klev.PublishMessage
+		var msgs []api.PublishMessage
 		for low := int64(0); low < dataLen; low += 64 * 1024 {
 			high := low + 64*1024
 			if high > dataLen {
 				high = dataLen
 			}
 
-			msgs = append(msgs, klev.PublishMessage{
+			msgs = append(msgs, api.PublishMessage{
 				Value: data[low:high],
 			})
 		}
@@ -69,7 +69,7 @@ var uploadCmd = &cobra.Command{
 			return err
 		}
 
-		log, err := klient.LogCreate(cmd.Context(), klev.LogIn{
+		log, err := client.LogCreate(cmd.Context(), api.LogCreate{
 			Metadata: string(md),
 		})
 		if err != nil {
@@ -82,7 +82,7 @@ var uploadCmd = &cobra.Command{
 				high = len(msgs)
 			}
 
-			if _, err := klient.Publish(cmd.Context(), log.LogID, msgs[low:high]); err != nil {
+			if _, err := client.Publish(cmd.Context(), log.LogID, msgs[low:high]); err != nil {
 				return err
 			}
 		}
@@ -98,9 +98,9 @@ var downloadCmd = &cobra.Command{
 	Short: "download files from klev",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		logID := klev.LogID(args[0])
+		logID := api.LogID(args[0])
 
-		log, err := klient.LogGet(cmd.Context(), logID)
+		log, err := client.LogGet(cmd.Context(), logID)
 		if err != nil {
 			return err
 		}
@@ -110,9 +110,9 @@ var downloadCmd = &cobra.Command{
 		}
 
 		var data = make([]byte, 0, md.Size)
-		offset := klev.OffsetOldest
+		offset := api.OffsetOldest
 		for {
-			next, msgs, err := klient.Consume(cmd.Context(), logID, offset, 32)
+			next, msgs, err := client.Consume(cmd.Context(), logID, offset, 32)
 			if err != nil {
 				return err
 			}

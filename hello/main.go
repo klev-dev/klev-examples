@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	klev "github.com/klev-dev/klev-api-go"
+	api "github.com/klev-dev/klev-api-go"
 )
 
 func main() {
@@ -14,10 +14,10 @@ func main() {
 }
 
 func hello(ctx context.Context) error {
-	cfg := klev.NewConfig(os.Getenv("KLEV_TOKEN_DEMO"))
-	client := klev.New(cfg)
+	cfg := api.NewConfig(os.Getenv("KLEV_TOKEN_DEMO"))
+	client := api.New(cfg)
 
-	log, err := client.LogCreate(ctx, klev.LogIn{})
+	log, err := client.LogCreate(ctx, api.LogCreate{})
 	if err != nil {
 		return err
 	}
