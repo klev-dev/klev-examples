@@ -178,7 +178,7 @@ func (a *App) room(w http.ResponseWriter, r *http.Request, user string) error {
 	var msgs []RoomMessage
 	offset := api.OffsetOldest
 	for {
-		next, messages, err := a.client.Consume(r.Context(), logID, offset, 32)
+		next, messages, err := a.client.Consume(r.Context(), logID, api.ConsumeOffset(offset), api.ConsumeLen(32))
 		switch {
 		case api.IsError(err, api.ErrLogsNotFound):
 			return a.redirect(w, r, "/")

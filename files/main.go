@@ -112,7 +112,7 @@ var downloadCmd = &cobra.Command{
 		var data = make([]byte, 0, md.Size)
 		offset := api.OffsetOldest
 		for {
-			next, msgs, err := client.Consume(cmd.Context(), logID, offset, 32)
+			next, msgs, err := client.Consume(cmd.Context(), logID, api.ConsumeOffset(offset), api.ConsumeLen(32))
 			if err != nil {
 				return err
 			}
