@@ -27,7 +27,7 @@ func hello(ctx context.Context) error {
 		return err
 	}
 
-	msg, err := client.Get(ctx, log.LogID, 0)
+	msg, err := client.GetByOffset(ctx, log.LogID, 0)
 	if err != nil {
 		return err
 	}
