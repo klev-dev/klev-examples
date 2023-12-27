@@ -8,12 +8,12 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"slices"
 	"strings"
 	"time"
 
 	api "github.com/klev-dev/klev-api-go"
 	"github.com/klev-dev/kleverr"
+	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 )
 
