@@ -44,3 +44,11 @@ diff -s in.txt out.txt
 This example implements simple web chat server on top of klev.
  * to run the example: `./bin/chat`
  * to access the server: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+
+## Journal
+
+Collects systemd journal logs and send them to klev log. Run:
+
+```
+$./bin/jounral
+```
