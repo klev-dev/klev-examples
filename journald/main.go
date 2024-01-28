@@ -12,6 +12,9 @@ import (
 	"time"
 
 	api "github.com/klev-dev/klev-api-go"
+	"github.com/klev-dev/klev-api-go/client"
+	"github.com/klev-dev/klev-api-go/logs"
+	"github.com/klev-dev/klev-api-go/messages"
 	"github.com/klev-dev/kleverr"
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
@@ -21,7 +24,7 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	messages := make(chan api.PublishMessage, 32)
+	messages := make(chan messages.PublishMessage, 32)
 
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
@@ -37,8 +40,8 @@ func main() {
 	}
 }
 
-func tailJournal(ctx context.Context, messages chan<- api.PublishMessage) error {
-	defer close(messages)
+func tailJournal(ctx context.Context, msgs chan<- messages.PublishMessage) error {
+	defer close(msgs)
 
 	cmd := exec.CommandContext(ctx, "/usr/bin/journalctl", "--system", "-f", "-o", "json")
 	stdout, err := cmd.StdoutPipe()
@@ -58,27 +61,27 @@ func tailJournal(ctx context.Context, messages chan<- api.PublishMessage) error 
 			}
 			return kleverr.Ret(err)
 		}
-		messages <- api.NewPublishMessageValue(strings.TrimSpace(line))
+		msgs <- messages.NewPublishMessageValue(strings.TrimSpace(line))
 	}
 }
 
-func publishBatched(ctx context.Context, messages <-chan api.PublishMessage) error {
-	cfg := api.NewConfig(os.Getenv("KLEV_TOKEN_DEMO"))
+func publishBatched(ctx context.Context, msgs <-chan messages.PublishMessage) error {
+	cfg := client.NewConfig(os.Getenv("KLEV_TOKEN_DEMO"))
 	client := api.New(cfg)
 
-	log, err := client.LogCreate(ctx, api.LogCreate{
+	log, err := client.Logs.Create(ctx, logs.CreateParams{
 		Metadata: fmt.Sprintf(`{"source": "journal", "unit": "system", "start": %d}`, time.Now().Unix()),
 	})
 	if err != nil {
 		return kleverr.Ret(err)
 	}
 
-	var pending []api.PublishMessage
+	var pending []messages.PublishMessage
 
 	var publishAny = func() (bool, error) {
 		publish := len(pending) > 0
 		if publish {
-			if _, err := client.Publish(ctx, log.LogID, pending); err != nil {
+			if _, err := client.Messages.Publish(ctx, log.LogID, pending); err != nil {
 				return false, kleverr.Ret(err)
 			}
 			pending = nil
@@ -88,7 +91,7 @@ func publishBatched(ctx context.Context, messages <-chan api.PublishMessage) err
 
 	var publishBatch = func() error {
 		if len(pending) > 24 {
-			if _, err := client.Publish(ctx, log.LogID, pending[0:24]); err != nil {
+			if _, err := client.Messages.Publish(ctx, log.LogID, pending[0:24]); err != nil {
 				return kleverr.Ret(err)
 			}
 			pending = slices.Delete(pending, 0, 24)
@@ -98,7 +101,7 @@ func publishBatched(ctx context.Context, messages <-chan api.PublishMessage) err
 
 	for {
 		select {
-		case msg, ok := <-messages:
+		case msg, ok := <-msgs:
 			if ok {
 				// received a new message, append and try publish
 				pending = append(pending, msg)
@@ -116,7 +119,7 @@ func publishBatched(ctx context.Context, messages <-chan api.PublishMessage) err
 				return err
 			} else if !pub {
 				// no pending messages, wait for any change
-				msg, ok := <-messages
+				msg, ok := <-msgs
 				if ok {
 					pending = append(pending, msg)
 				} else {

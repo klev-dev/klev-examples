@@ -10,6 +10,9 @@ import (
 	"time"
 
 	api "github.com/klev-dev/klev-api-go"
+	"github.com/klev-dev/klev-api-go/client"
+	"github.com/klev-dev/klev-api-go/logs"
+	"github.com/klev-dev/klev-api-go/messages"
 	flag "github.com/spf13/pflag"
 )
 
@@ -18,7 +21,7 @@ type App struct {
 	templateReload bool
 	templates      *template.Template
 
-	client *api.Client
+	client *api.Clients
 }
 
 func main() {
@@ -37,7 +40,7 @@ func run(reload bool) error {
 		return err
 	}
 
-	cfg := api.NewConfig(os.Getenv("KLEV_TOKEN_DEMO"))
+	cfg := client.NewConfig(os.Getenv("KLEV_TOKEN_DEMO"))
 
 	a := &App{
 		templateFiles:  t,
@@ -102,29 +105,29 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (a *App) index(w http.ResponseWriter, r *http.Request, user string) error {
-	logs, err := a.client.LogsList(r.Context())
+	rooms, err := a.client.Logs.List(r.Context())
 	if err != nil {
 		return err
 	}
 
-	if len(logs) == 0 {
-		log, err := a.client.LogCreate(r.Context(), api.LogCreate{
+	if len(rooms) == 0 {
+		room, err := a.client.Logs.Create(r.Context(), logs.CreateParams{
 			Metadata:    "General",
 			TrimSeconds: 60 * 60,
 		})
 		if err != nil {
 			return err
 		}
-		return a.redirect(w, r, fmt.Sprintf("/%s", log.LogID))
+		return a.redirect(w, r, fmt.Sprintf("/%s", room.LogID))
 	}
 
-	for _, l := range logs {
-		if l.Metadata == "General" {
-			return a.redirect(w, r, fmt.Sprintf("/%s", l.LogID))
+	for _, room := range rooms {
+		if room.Metadata == "General" {
+			return a.redirect(w, r, fmt.Sprintf("/%s", room.LogID))
 		}
 	}
 
-	return a.redirect(w, r, fmt.Sprintf("/%s", logs[0].LogID))
+	return a.redirect(w, r, fmt.Sprintf("/%s", rooms[0].LogID))
 }
 
 func (a *App) addRoom(w http.ResponseWriter, r *http.Request, user string) error {
@@ -136,14 +139,14 @@ func (a *App) addRoom(w http.ResponseWriter, r *http.Request, user string) error
 		return err
 	}
 	if name := r.FormValue("room-name"); name != "" {
-		log, err := a.client.LogCreate(r.Context(), api.LogCreate{
+		room, err := a.client.Logs.Create(r.Context(), logs.CreateParams{
 			Metadata:    name,
 			TrimSeconds: 60 * 60,
 		})
 		if err != nil {
 			return err
 		}
-		return a.redirect(w, r, fmt.Sprintf("/%s", log.LogID))
+		return a.redirect(w, r, fmt.Sprintf("/%s", room.LogID))
 	}
 
 	return a.redirect(w, r, "/")
@@ -156,16 +159,17 @@ type RoomMessage struct {
 }
 
 func (a *App) room(w http.ResponseWriter, r *http.Request, user string) error {
-	logID := api.LogID(r.URL.Path[1:])
+	logID := logs.LogID(r.URL.Path[1:])
 
 	if r.Method == http.MethodPost {
 		if err := r.ParseForm(); err != nil {
 			return err
 		}
 		if text := r.FormValue("message"); text != "" {
-			_, err := a.client.Publish(r.Context(), logID, []api.PublishMessage{api.NewPublishMessage(user, text)})
+			_, err := a.client.Messages.Publish(r.Context(), logID,
+				[]messages.PublishMessage{messages.NewPublishMessage(user, text)})
 			switch {
-			case api.IsError(err, api.ErrLogsNotFound):
+			case logs.IsErrNotFound(err):
 				return a.redirect(w, r, "/")
 			case err != nil:
 				return err
@@ -176,11 +180,12 @@ func (a *App) room(w http.ResponseWriter, r *http.Request, user string) error {
 	}
 
 	var msgs []RoomMessage
-	offset := api.OffsetOldest
+	offset := messages.OffsetOldest
 	for {
-		next, messages, err := a.client.Consume(r.Context(), logID, api.ConsumeOffset(offset), api.ConsumeLen(32))
+		next, messages, err := a.client.Messages.Consume(r.Context(), logID,
+			messages.ConsumeOffset(offset), messages.ConsumeLen(32))
 		switch {
-		case api.IsError(err, api.ErrLogsNotFound):
+		case logs.IsErrNotFound(err):
 			return a.redirect(w, r, "/")
 		case err != nil:
 			return err
@@ -200,7 +205,7 @@ func (a *App) room(w http.ResponseWriter, r *http.Request, user string) error {
 		}
 	}
 
-	logs, err := a.client.LogsList(r.Context())
+	logs, err := a.client.Logs.List(r.Context())
 	if err != nil {
 		return err
 	}

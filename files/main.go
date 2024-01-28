@@ -7,17 +7,20 @@ import (
 	"os"
 
 	api "github.com/klev-dev/klev-api-go"
+	"github.com/klev-dev/klev-api-go/client"
+	"github.com/klev-dev/klev-api-go/logs"
+	"github.com/klev-dev/klev-api-go/messages"
 	"github.com/spf13/cobra"
 )
 
-var client *api.Client
+var klient *api.Clients
 
 var rootCmd = &cobra.Command{
 	Use:   "klev-example-files",
 	Short: "upload/download files via klev",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		cfg := api.NewConfig(os.Getenv("KLEV_TOKEN_DEMO"))
-		client = api.New(cfg)
+		cfg := client.NewConfig(os.Getenv("KLEV_TOKEN_DEMO"))
+		klient = api.New(cfg)
 	},
 }
 
@@ -52,14 +55,14 @@ var uploadCmd = &cobra.Command{
 		}
 		dataLen := int64(len(data))
 
-		var msgs []api.PublishMessage
+		var msgs []messages.PublishMessage
 		for low := int64(0); low < dataLen; low += 64 * 1024 {
 			high := low + 64*1024
 			if high > dataLen {
 				high = dataLen
 			}
 
-			msgs = append(msgs, api.PublishMessage{
+			msgs = append(msgs, messages.PublishMessage{
 				Value: data[low:high],
 			})
 		}
@@ -69,7 +72,7 @@ var uploadCmd = &cobra.Command{
 			return err
 		}
 
-		log, err := client.LogCreate(cmd.Context(), api.LogCreate{
+		log, err := klient.Logs.Create(cmd.Context(), logs.CreateParams{
 			Metadata: string(md),
 		})
 		if err != nil {
@@ -82,7 +85,7 @@ var uploadCmd = &cobra.Command{
 				high = len(msgs)
 			}
 
-			if _, err := client.Publish(cmd.Context(), log.LogID, msgs[low:high]); err != nil {
+			if _, err := klient.Messages.Publish(cmd.Context(), log.LogID, msgs[low:high]); err != nil {
 				return err
 			}
 		}
@@ -98,9 +101,9 @@ var downloadCmd = &cobra.Command{
 	Short: "download files from klev",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		logID := api.LogID(args[0])
+		logID := logs.LogID(args[0])
 
-		log, err := client.LogGet(cmd.Context(), logID)
+		log, err := klient.Logs.Get(cmd.Context(), logID)
 		if err != nil {
 			return err
 		}
@@ -110,9 +113,10 @@ var downloadCmd = &cobra.Command{
 		}
 
 		var data = make([]byte, 0, md.Size)
-		offset := api.OffsetOldest
+		offset := messages.OffsetOldest
 		for {
-			next, msgs, err := client.Consume(cmd.Context(), logID, api.ConsumeOffset(offset), api.ConsumeLen(32))
+			next, msgs, err := klient.Messages.Consume(cmd.Context(), logID,
+				messages.ConsumeOffset(offset), messages.ConsumeLen(32))
 			if err != nil {
 				return err
 			}

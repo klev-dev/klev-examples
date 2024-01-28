@@ -7,6 +7,8 @@ import (
 	"time"
 
 	api "github.com/klev-dev/klev-api-go"
+	"github.com/klev-dev/klev-api-go/client"
+	"github.com/klev-dev/klev-api-go/logs"
 )
 
 func main() {
@@ -14,20 +16,20 @@ func main() {
 }
 
 func hello(ctx context.Context) error {
-	cfg := api.NewConfig(os.Getenv("KLEV_TOKEN_DEMO"))
+	cfg := client.NewConfig(os.Getenv("KLEV_TOKEN_DEMO"))
 	client := api.New(cfg)
 
-	log, err := client.LogCreate(ctx, api.LogCreate{})
+	log, err := client.Logs.Create(ctx, logs.CreateParams{})
 	if err != nil {
 		return err
 	}
 
-	_, err = client.Post(ctx, log.LogID, time.Time{}, nil, []byte("hello world!"))
+	_, err = client.Messages.Post(ctx, log.LogID, time.Time{}, nil, []byte("hello world!"))
 	if err != nil {
 		return err
 	}
 
-	msg, err := client.GetByOffset(ctx, log.LogID, 0)
+	msg, err := client.Messages.GetByOffset(ctx, log.LogID, 0)
 	if err != nil {
 		return err
 	}
