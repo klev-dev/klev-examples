@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"github.com/klev-dev/klev-api-go"
-	"github.com/klev-dev/klev-api-go/clients"
+	"github.com/klev-dev/klev-api-go/logs"
+	"github.com/klev-dev/klev-api-go/messages"
 	flag "github.com/spf13/pflag"
 )
 
@@ -19,7 +20,8 @@ type App struct {
 	templateReload bool
 	templates      *template.Template
 
-	client *clients.Clients
+	logs     *logs.Client
+	messages *messages.Client
 }
 
 func main() {
@@ -43,7 +45,9 @@ func run(reload bool) error {
 	a := &App{
 		templateFiles:  t,
 		templateReload: reload,
-		client:         clients.New(cfg),
+
+		logs:     logs.New(cfg),
+		messages: messages.New(cfg),
 	}
 
 	srv := http.Server{
@@ -103,13 +107,13 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (a *App) index(w http.ResponseWriter, r *http.Request, user string) error {
-	rooms, err := a.client.Logs.List(r.Context())
+	rooms, err := a.logs.List(r.Context())
 	if err != nil {
 		return err
 	}
 
 	if len(rooms) == 0 {
-		room, err := a.client.Logs.Create(r.Context(), klev.LogCreateParams{
+		room, err := a.logs.Create(r.Context(), klev.LogCreateParams{
 			Metadata:    "General",
 			TrimSeconds: 60 * 60,
 		})
@@ -137,7 +141,7 @@ func (a *App) addRoom(w http.ResponseWriter, r *http.Request, user string) error
 		return err
 	}
 	if name := r.FormValue("room-name"); name != "" {
-		room, err := a.client.Logs.Create(r.Context(), klev.LogCreateParams{
+		room, err := a.logs.Create(r.Context(), klev.LogCreateParams{
 			Metadata:    name,
 			TrimSeconds: 60 * 60,
 		})
@@ -164,7 +168,7 @@ func (a *App) room(w http.ResponseWriter, r *http.Request, user string) error {
 			return err
 		}
 		if text := r.FormValue("message"); text != "" {
-			_, err := a.client.Messages.Publish(r.Context(), logID,
+			_, err := a.messages.Publish(r.Context(), logID,
 				[]klev.PublishMessage{klev.NewPublishMessage(user, text)})
 			switch {
 			case klev.IsErrLogNotFound(err):
@@ -180,7 +184,7 @@ func (a *App) room(w http.ResponseWriter, r *http.Request, user string) error {
 	var msgs []RoomMessage
 	offset := klev.OffsetOldest
 	for {
-		next, messages, err := a.client.Messages.Consume(r.Context(), logID,
+		next, messages, err := a.messages.Consume(r.Context(), logID,
 			klev.ConsumeOffset(offset), klev.ConsumeLen(32))
 		switch {
 		case klev.IsErrLogNotFound(err):
@@ -203,7 +207,7 @@ func (a *App) room(w http.ResponseWriter, r *http.Request, user string) error {
 		}
 	}
 
-	logs, err := a.client.Logs.List(r.Context())
+	logs, err := a.logs.List(r.Context())
 	if err != nil {
 		return err
 	}
