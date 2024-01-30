@@ -11,10 +11,8 @@ import (
 	"strings"
 	"time"
 
-	api "github.com/klev-dev/klev-api-go"
-	"github.com/klev-dev/klev-api-go/client"
-	"github.com/klev-dev/klev-api-go/logs"
-	"github.com/klev-dev/klev-api-go/messages"
+	"github.com/klev-dev/klev-api-go"
+	"github.com/klev-dev/klev-api-go/clients"
 	"github.com/klev-dev/kleverr"
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
@@ -24,7 +22,7 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	messages := make(chan messages.PublishMessage, 32)
+	messages := make(chan klev.PublishMessage, 32)
 
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
@@ -40,7 +38,7 @@ func main() {
 	}
 }
 
-func tailJournal(ctx context.Context, msgs chan<- messages.PublishMessage) error {
+func tailJournal(ctx context.Context, msgs chan<- klev.PublishMessage) error {
 	defer close(msgs)
 
 	cmd := exec.CommandContext(ctx, "/usr/bin/journalctl", "--system", "-f", "-o", "json")
@@ -61,22 +59,22 @@ func tailJournal(ctx context.Context, msgs chan<- messages.PublishMessage) error
 			}
 			return kleverr.Ret(err)
 		}
-		msgs <- messages.NewPublishMessageValue(strings.TrimSpace(line))
+		msgs <- klev.NewPublishMessageValue(strings.TrimSpace(line))
 	}
 }
 
-func publishBatched(ctx context.Context, msgs <-chan messages.PublishMessage) error {
-	cfg := client.NewConfig(os.Getenv("KLEV_TOKEN_DEMO"))
-	client := api.New(cfg)
+func publishBatched(ctx context.Context, msgs <-chan klev.PublishMessage) error {
+	cfg := klev.NewConfig(os.Getenv("KLEV_TOKEN_DEMO"))
+	client := clients.New(cfg)
 
-	log, err := client.Logs.Create(ctx, logs.CreateParams{
+	log, err := client.Logs.Create(ctx, klev.LogCreateParams{
 		Metadata: fmt.Sprintf(`{"source": "journal", "unit": "system", "start": %d}`, time.Now().Unix()),
 	})
 	if err != nil {
 		return kleverr.Ret(err)
 	}
 
-	var pending []messages.PublishMessage
+	var pending []klev.PublishMessage
 
 	var publishAny = func() (bool, error) {
 		publish := len(pending) > 0

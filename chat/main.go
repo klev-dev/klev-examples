@@ -9,10 +9,8 @@ import (
 	"os"
 	"time"
 
-	api "github.com/klev-dev/klev-api-go"
-	"github.com/klev-dev/klev-api-go/client"
-	"github.com/klev-dev/klev-api-go/logs"
-	"github.com/klev-dev/klev-api-go/messages"
+	"github.com/klev-dev/klev-api-go"
+	"github.com/klev-dev/klev-api-go/clients"
 	flag "github.com/spf13/pflag"
 )
 
@@ -21,7 +19,7 @@ type App struct {
 	templateReload bool
 	templates      *template.Template
 
-	client *api.Clients
+	client *clients.Clients
 }
 
 func main() {
@@ -40,12 +38,12 @@ func run(reload bool) error {
 		return err
 	}
 
-	cfg := client.NewConfig(os.Getenv("KLEV_TOKEN_DEMO"))
+	cfg := klev.NewConfig(os.Getenv("KLEV_TOKEN_DEMO"))
 
 	a := &App{
 		templateFiles:  t,
 		templateReload: reload,
-		client:         api.New(cfg),
+		client:         clients.New(cfg),
 	}
 
 	srv := http.Server{
@@ -111,7 +109,7 @@ func (a *App) index(w http.ResponseWriter, r *http.Request, user string) error {
 	}
 
 	if len(rooms) == 0 {
-		room, err := a.client.Logs.Create(r.Context(), logs.CreateParams{
+		room, err := a.client.Logs.Create(r.Context(), klev.LogCreateParams{
 			Metadata:    "General",
 			TrimSeconds: 60 * 60,
 		})
@@ -139,7 +137,7 @@ func (a *App) addRoom(w http.ResponseWriter, r *http.Request, user string) error
 		return err
 	}
 	if name := r.FormValue("room-name"); name != "" {
-		room, err := a.client.Logs.Create(r.Context(), logs.CreateParams{
+		room, err := a.client.Logs.Create(r.Context(), klev.LogCreateParams{
 			Metadata:    name,
 			TrimSeconds: 60 * 60,
 		})
@@ -159,7 +157,7 @@ type RoomMessage struct {
 }
 
 func (a *App) room(w http.ResponseWriter, r *http.Request, user string) error {
-	logID := logs.LogID(r.URL.Path[1:])
+	logID := klev.LogID(r.URL.Path[1:])
 
 	if r.Method == http.MethodPost {
 		if err := r.ParseForm(); err != nil {
@@ -167,9 +165,9 @@ func (a *App) room(w http.ResponseWriter, r *http.Request, user string) error {
 		}
 		if text := r.FormValue("message"); text != "" {
 			_, err := a.client.Messages.Publish(r.Context(), logID,
-				[]messages.PublishMessage{messages.NewPublishMessage(user, text)})
+				[]klev.PublishMessage{klev.NewPublishMessage(user, text)})
 			switch {
-			case logs.IsErrNotFound(err):
+			case klev.IsErrLogNotFound(err):
 				return a.redirect(w, r, "/")
 			case err != nil:
 				return err
@@ -180,12 +178,12 @@ func (a *App) room(w http.ResponseWriter, r *http.Request, user string) error {
 	}
 
 	var msgs []RoomMessage
-	offset := messages.OffsetOldest
+	offset := klev.OffsetOldest
 	for {
 		next, messages, err := a.client.Messages.Consume(r.Context(), logID,
-			messages.ConsumeOffset(offset), messages.ConsumeLen(32))
+			klev.ConsumeOffset(offset), klev.ConsumeLen(32))
 		switch {
-		case logs.IsErrNotFound(err):
+		case klev.IsErrLogNotFound(err):
 			return a.redirect(w, r, "/")
 		case err != nil:
 			return err

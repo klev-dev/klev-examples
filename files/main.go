@@ -6,21 +6,19 @@ import (
 	"io/ioutil"
 	"os"
 
-	api "github.com/klev-dev/klev-api-go"
-	"github.com/klev-dev/klev-api-go/client"
-	"github.com/klev-dev/klev-api-go/logs"
-	"github.com/klev-dev/klev-api-go/messages"
+	"github.com/klev-dev/klev-api-go"
+	"github.com/klev-dev/klev-api-go/clients"
 	"github.com/spf13/cobra"
 )
 
-var klient *api.Clients
+var klient *clients.Clients
 
 var rootCmd = &cobra.Command{
 	Use:   "klev-example-files",
 	Short: "upload/download files via klev",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		cfg := client.NewConfig(os.Getenv("KLEV_TOKEN_DEMO"))
-		klient = api.New(cfg)
+		cfg := klev.NewConfig(os.Getenv("KLEV_TOKEN_DEMO"))
+		klient = clients.New(cfg)
 	},
 }
 
@@ -55,14 +53,14 @@ var uploadCmd = &cobra.Command{
 		}
 		dataLen := int64(len(data))
 
-		var msgs []messages.PublishMessage
+		var msgs []klev.PublishMessage
 		for low := int64(0); low < dataLen; low += 64 * 1024 {
 			high := low + 64*1024
 			if high > dataLen {
 				high = dataLen
 			}
 
-			msgs = append(msgs, messages.PublishMessage{
+			msgs = append(msgs, klev.PublishMessage{
 				Value: data[low:high],
 			})
 		}
@@ -72,7 +70,7 @@ var uploadCmd = &cobra.Command{
 			return err
 		}
 
-		log, err := klient.Logs.Create(cmd.Context(), logs.CreateParams{
+		log, err := klient.Logs.Create(cmd.Context(), klev.LogCreateParams{
 			Metadata: string(md),
 		})
 		if err != nil {
@@ -101,7 +99,7 @@ var downloadCmd = &cobra.Command{
 	Short: "download files from klev",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		logID := logs.LogID(args[0])
+		logID := klev.LogID(args[0])
 
 		log, err := klient.Logs.Get(cmd.Context(), logID)
 		if err != nil {
@@ -113,10 +111,10 @@ var downloadCmd = &cobra.Command{
 		}
 
 		var data = make([]byte, 0, md.Size)
-		offset := messages.OffsetOldest
+		offset := klev.OffsetOldest
 		for {
 			next, msgs, err := klient.Messages.Consume(cmd.Context(), logID,
-				messages.ConsumeOffset(offset), messages.ConsumeLen(32))
+				klev.ConsumeOffset(offset), klev.ConsumeLen(32))
 			if err != nil {
 				return err
 			}
