@@ -161,7 +161,10 @@ type RoomMessage struct {
 }
 
 func (a *App) room(w http.ResponseWriter, r *http.Request, user string) error {
-	logID := klev.LogID(r.URL.Path[1:])
+	logID, err := klev.ParseLogID(r.URL.Path[1:])
+	if err != nil {
+		return err
+	}
 
 	if r.Method == http.MethodPost {
 		if err := r.ParseForm(); err != nil {

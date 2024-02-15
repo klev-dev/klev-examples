@@ -149,7 +149,11 @@ func main() {
 		Short: "download files from klev",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return f.download(cmd.Context(), klev.LogID(args[0]), args[1])
+			logID, err := klev.ParseLogID(args[0])
+			if err != nil {
+				return err
+			}
+			return f.download(cmd.Context(), logID, args[1])
 		},
 	})
 
