@@ -1,5 +1,5 @@
 {
-  description = "klevs is a fast message server";
+  description = "examples on how to use klev.dev";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
